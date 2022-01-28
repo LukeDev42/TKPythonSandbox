@@ -19,6 +19,12 @@ def main(root):
     cef.Shutdown()
 
 def open_link(url):
+    """
+    This takes in a url and uses CEFPython3 to open it in a browser.
+
+    :param url: A string that's a url to a webpage or local HTML file
+    :return: None
+    """
     print(url)
     sys.excepthook = cef.ExceptHook
     cef.Initialize()

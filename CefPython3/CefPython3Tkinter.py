@@ -5,6 +5,10 @@ try:
     import tkinter as tk
 except ImportError:
     import Tkinter as tk
+
+from tkinter import ttk
+from tkcalendar import Calendar, DateEntry
+
 import sys
 import os
 import platform
@@ -26,30 +30,6 @@ logger = _logging.getLogger("tkinter_.py")
 IMAGE_EXT = ".png" if tk.TkVersion > 8.5 else ".gif"
 
 
-def main():
-    logger.setLevel(_logging.DEBUG)
-    stream_handler = _logging.StreamHandler()
-    formatter = _logging.Formatter("[%(filename)s] %(message)s")
-    stream_handler.setFormatter(formatter)
-    logger.addHandler(stream_handler)
-    logger.info("CEF Python {ver}".format(ver=cef.__version__))
-    logger.info("Python {ver} {arch}".format(
-        ver=platform.python_version(), arch=platform.architecture()[0]))
-    logger.info("Tk {ver}".format(ver=tk.Tcl().eval('info patchlevel')))
-    assert cef.__version__ >= "55.3", "CEF Python v55.3+ required to run this"
-    sys.excepthook = cef.ExceptHook  # To shutdown all CEF processes on error
-    # Tk must be initialized before CEF otherwise fatal error (Issue #306)
-    root = tk.Tk()
-    app = MainFrame(root)
-    settings = {}
-    if MAC:
-        settings["external_message_pump"] = True
-    cef.Initialize(settings=settings)
-    app.mainloop()
-    logger.debug("Main loop exited")
-    cef.Shutdown()
-
-
 class MainFrame(tk.Frame):
 
     def __init__(self, root):
@@ -58,7 +38,7 @@ class MainFrame(tk.Frame):
         self.root = root
 
         # Root
-        root.geometry("900x640")
+        # root.geometry("900x640")
         tk.Grid.rowconfigure(root, 0, weight=1)
         tk.Grid.columnconfigure(root, 0, weight=1)
 
@@ -72,22 +52,85 @@ class MainFrame(tk.Frame):
         self.bind("<FocusIn>", self.on_focus_in)
         self.bind("<FocusOut>", self.on_focus_out)
 
+        #User options frame
+        user_options_frame = tk.Frame(self)
+        user_options_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        self.uo_start_date = DateEntry(user_options_frame, width=16, bd=2)
+        self.uo_start_date.grid(row=1, column=0, padx=5, pady=5)
+        uo_sd_label = ttk.Label(master=user_options_frame, text="Start Date", font=("Verdana", 10))
+        uo_sd_label.grid(row=0, column=0, padx=5, pady=5)
+        self.uo_end_date = DateEntry(user_options_frame, width=16, bd=2)
+        self.uo_end_date.grid(row=1, column=1, padx=5, pady=5)
+        uo_ed_label = ttk.Label(master=user_options_frame, text="End Date", font=("Verdana", 10))
+        uo_ed_label.grid(row=0, column=1, padx=5, pady=5)
+
+        self.uo_country_choice = tk.StringVar()
+        countries = ["Canada", "Mexico", "USA"]
+        uo_country_combobox = ttk.Combobox(user_options_frame, values=countries, textvariable=self.uo_country_choice,
+                                           state="readonly")
+        uo_country_combobox.grid(row=3, column=0, padx=5, pady=5)
+        uo_cc_label = ttk.Label(user_options_frame, text="Country", font=("Verdana", 10))
+        uo_cc_label.grid(row=2, column=0, padx=5, pady=5)
+        self.uo_postal_code = tk.StringVar()
+        uo_zip_entry = ttk.Entry(user_options_frame, width=15, textvariable=self.uo_postal_code)
+        uo_zip_entry.grid(row=3, column=1, padx=5, pady=5)
+        uo_ze_label = ttk.Label(user_options_frame, text="Postal Code", font=("Verdana", 10))
+        uo_ze_label.grid(row=2, column=1, padx=5, pady=5)
+
+        self.uo_weather_data_option = tk.StringVar(None, "Temperature")
+        uo_weather_options_label = ttk.Label(user_options_frame, text="Weather Data Comparison", font=("Veranda", 10))
+        uo_weather_options_label.grid(row=4, column=0, columnspan=2)
+        uo_weather_options_radio1 = ttk.Radiobutton(user_options_frame, variable=self.uo_weather_data_option,
+                                                    text="Temperature", value="Temperature")
+        uo_weather_options_radio2 = ttk.Radiobutton(user_options_frame, variable=self.uo_weather_data_option,
+                                                    text="Solar Energy", value="Solar Energy")
+        uo_weather_options_radio3 = ttk.Radiobutton(user_options_frame, variable=self.uo_weather_data_option,
+                                                    text="UV Index", value="UV Index")
+        uo_weather_options_radio1.grid(row=5, column=0)
+        uo_weather_options_radio2.grid(row=6, column=0)
+        uo_weather_options_radio3.grid(row=7, column=0)
+
+        uo_button = ttk.Button(user_options_frame, text="Update Data", command=self.printUserOptions)
+        uo_button.grid(row=8, column=0, columnspan=2)
+
         # NavigationBar
-        self.navigation_bar = NavigationBar(self)
-        self.navigation_bar.grid(row=0, column=0,
-                                 sticky=(tk.N + tk.S + tk.E + tk.W))
-        tk.Grid.rowconfigure(self, 0, weight=0)
-        tk.Grid.columnconfigure(self, 0, weight=0)
+        # self.navigation_bar = NavigationBar(self)
+        # self.navigation_bar.grid(row=0, column=0,
+        #                          sticky=(tk.N + tk.S + tk.E + tk.W))
+        # tk.Grid.rowconfigure(self, 0, weight=0)
+        # tk.Grid.columnconfigure(self, 0, weight=0)
 
         # BrowserFrame
         self.browser_frame = BrowserFrame(self, self.navigation_bar)
-        self.browser_frame.grid(row=1, column=0,
-                                sticky=(tk.N + tk.S + tk.E + tk.W))
-        tk.Grid.rowconfigure(self, 1, weight=1)
+        self.browser_frame.grid(row=0, column=1, sticky="nswe", columnspan=3, rowspan=2)
+        # tk.Grid.rowconfigure(self, 1, weight=1)
+        tk.Grid.columnconfigure(self, 1, weight=1)
+        tk.Grid.rowconfigure(self, 0, weight=1)
         tk.Grid.columnconfigure(self, 0, weight=1)
+        tk.Grid.columnconfigure(self, 2, weight=1)
+        tk.Grid.columnconfigure(self, 3, weight=1)
+        tk.Grid.rowconfigure(self, 1, weight=1)
+        tk.Grid.rowconfigure(self, 2, weight=1)
+
+
+        #Pareto chart Frame
+        self.label = tk.Label(self, text="Pareto Chart Frame", font=("Verdana", 12))
+        self.label.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
+
+        #Weather chart frame
+        self.label1 = tk.Label(self, text="Weather Chart Frame", font=("Verdana", 12))
+        self.label1.grid(row=2, column=0, sticky="nsew", padx=10, pady=10, columnspan=3)
 
         # Pack MainFrame
         self.pack(fill=tk.BOTH, expand=tk.YES)
+
+    def printUserOptions(self):
+        print("These are the values the user has input")
+        print("Start Date: ", self.uo_start_date.get_date())
+        print("End Date: ", self.uo_end_date.get_date())
+        print("Country: ", self.uo_country_choice.get())
+        print("Postal Code: ", self.uo_postal_code.get())
+        print("Weather Data Comparison: ", self.uo_weather_data_option.get())
 
     def on_root_configure(self, _):
         logger.debug("MainFrame.on_root_configure")
@@ -152,8 +195,10 @@ class BrowserFrame(tk.Frame):
     def embed_browser(self):
         window_info = cef.WindowInfo()
         rect = [0, 0, self.winfo_width(), self.winfo_height()]
+        # rect = [0, 0, 1000, 1000]
         window_info.SetAsChild(self.get_window_handle(), rect)
         self.browser = cef.CreateBrowserSync(window_info,
+                                             # url="C:\\Users\\leite\\Desktop\\Repos\\TKPythonSandbox\\output.html")
                                              url="C:\\Users\\leite\\Desktop\\Repos\\TKPythonSandbox\\output.html")
         assert self.browser
         self.browser.SetClientHandler(LifespanHandler(self))
@@ -409,4 +454,26 @@ class Tabs(tk.Frame):
 
 
 if __name__ == '__main__':
-    main()
+    # main()
+    logger.setLevel(_logging.DEBUG)
+    stream_handler = _logging.StreamHandler()
+    formatter = _logging.Formatter("[%(filename)s] %(message)s")
+    stream_handler.setFormatter(formatter)
+    logger.addHandler(stream_handler)
+    logger.info("CEF Python {ver}".format(ver=cef.__version__))
+    logger.info("Python {ver} {arch}".format(
+        ver=platform.python_version(), arch=platform.architecture()[0]))
+    logger.info("Tk {ver}".format(ver=tk.Tcl().eval('info patchlevel')))
+    assert cef.__version__ >= "55.3", "CEF Python v55.3+ required to run this"
+    sys.excepthook = cef.ExceptHook  # To shutdown all CEF processes on error
+    # Tk must be initialized before CEF otherwise fatal error (Issue #306)
+    root = tk.Tk()
+    root.geometry("1350x1000")
+    app = MainFrame(root)
+    settings = {}
+    if MAC:
+        settings["external_message_pump"] = True
+    cef.Initialize(settings=settings)
+    app.mainloop()
+    logger.debug("Main loop exited")
+    cef.Shutdown()
